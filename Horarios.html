@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de horarios académicos para la facultad de Derecho de Areandina">
+    <title>Horarios Académicos - Derecho | Areandina</title>
+    <link rel="icon" type="image/png" href="https://digitk.areandina.edu.co/assets/custom/images/logo.png">
+    <style>
+        /* --- ESTILOS GENERALES Y VARIABLES --- */
+        :root {
+            --verde-areandina: #7fb536;
+            --magenta-areandina: #e6007e;
+            --naranja-areandina: #f59c2f;
+            --gris-areandina: #7f8c8d;
+            --negro: #000000;
+            --blanco: #ffffff;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --gris-claro: #f4f6f9;
+            --gris-medio: #dee2e6;
+            --sidebar-width: 260px;
+            --header-height: 70px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--gris-claro);
+            color: #333;
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            transition: margin-left 0.3s ease;
+        }
+
+        body.sidebar-closed {
+            --sidebar-width: 0px;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--blanco);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--gris-medio);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            z-index: 100;
+            flex-shrink: 0;
+            transition: transform 0.3s ease, margin-left 0.3s ease;
+            position: relative;
+            padding-top: 10px;
+        }
+
+        .sidebar-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .nav-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+
+        #jornada-section {
+            flex-shrink: 0;
+            padding: 25px 20px 30px 20px;
+            border-top: 1px solid #eee;
+            background-color: #fafafa;
+        }
+
+        .sidebar-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--gris-areandina);
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: block;
+        }
+
+        .title-semestres {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .title-jornada {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #999;
+        }
+
+        .schedule-type {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .schedule-btn {
+            padding: 12px 15px;
+            background-color: var(--blanco);
+            border: 1px solid var(--gris-medio);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            font-weight: 600;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #555;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .schedule-btn::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--gris-areandina);
+        }
+
+        .schedule-btn:hover {
+            background-color: #fff;
+            border-color: var(--verde-areandina);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .schedule-btn.active {
+            background-color: var(--verde-areandina);
+            color: var(--blanco);
+            border-color: var(--verde-areandina);
+            box-shadow: 0 4px 10px rgba(127, 181, 54, 0.3);
+        }
+
+        .schedule-btn.active::before {
+            background-color: var(--blanco);
+        }
+
+        .schedule-btn.disabled {
+            opacity: 0.6;
+            background-color: #f0f0f0;
+            color: #bbb;
+            border-color: #eee;
+            box-shadow: none;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        body.edit-mode .schedule-btn.disabled {
+            opacity: 0.8;
+            background-color: var(--blanco);
+            color: #555;
+            border-color: var(--gris-medio);
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .nav-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-item {
+            border-bottom: 1px solid #f9f9f9;
+        }
+
+        .nav-link,
+        .nav-header {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #444;
+            background: transparent;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+            text-decoration: none;
+            width: 100%;
+            border: none;
+            text-align: left;
+        }
+
+        .nav-link:hover,
+        .nav-header:hover {
+            background-color: #f4f6f9;
+            color: var(--negro);
+        }
+
+        .nav-link.active {
+            background-color: rgba(127, 181, 54, 0.08);
+            color: var(--verde-areandina);
+            border-right: 3px solid var(--verde-areandina);
+        }
+
+        /* --- TUS ICONOS DE FLECHA ORIGINALES --- */
+        .nav-arrow {
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #bbb;
+            border-bottom: 2px solid #bbb;
+            transform: rotate(45deg);
+            transition: transform 0.3s;
+            margin-right: 2px;
+        }
+
+        .nav-item.open .nav-arrow {
+            transform: rotate(225deg);
+            border-color: var(--verde-areandina);
+        }
+
+        .nav-item.open .nav-header {
+            color: var(--verde-areandina);
+        }
+
+        .submenu {
+            display: none;
+            background-color: #fff;
+            padding: 5px 0;
+        }
+
+        .nav-item.open .submenu {
+            display: block;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .sub-link {
+            display: block;
+            padding: 9px 20px 9px 45px;
+            font-size: 0.85rem;
+            color: #666;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .sub-link::after {
+            content: '';
+            position: absolute;
+            left: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: #ddd;
+        }
+
+        .sub-link:hover {
+            color: var(--negro);
+            background-color: #fbfbfb;
+        }
+
+        .sub-link.active {
+            color: var(--verde-areandina);
+            font-weight: 700;
+            background-color: rgba(127, 181, 54, 0.05);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--gris-claro);
+            transition: margin-left 0.3s ease;
+        }
+
+        header.top-bar {
+            background-color: var(--blanco);
+            padding: 0 30px;
+            height: var(--header-height);
+            border-bottom: 1px solid var(--gris-medio);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-logo {
+            height: 45px;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        #sidebar-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--gris-areandina);
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        /* --- ADMIN CONTROLS --- */
+        .admin-controls {
+            display: flex;
+            gap: 12px;
+            /* FIX: Asegurar que siempre sea clickable */
+            position: relative;
+            z-index: 1001;
+        }
+
+        #admin-btn, #logout-btn {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--magenta-areandina);
+            color: var(--blanco);
+        }
+
+        .btn-primary:hover {
+            background-color: #c4006b;
+            box-shadow: 0 4px 8px rgba(230, 0, 126, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--gris-areandina);
+            color: var(--blanco);
+        }
+
+        /* --- TABLA DE HORARIOS --- */
+        .schedule-wrapper {
+            flex: 1;
+            padding: 20px 30px;
+            overflow-y: auto;
+        }
+
+        .schedule-container {
+            background-color: var(--blanco);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th {
+            background-color: var(--verde-areandina);
+            color: var(--blanco);
+            padding: 15px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 0;
+            border: 1px solid var(--gris-medio);
+            height: 100px;
+            vertical-align: top;
+            width: 16.66%;
+        }
+
+        .time-cell {
+            background-color: #f8f9fa;
+            color: #666;
+            font-weight: 800;
+            text-align: center;
+            vertical-align: middle;
+            width: 100px;
+            font-size: 0.8rem;
+        }
+
+        .course-cell {
+            padding: 10px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        body.edit-mode .course-cell {
+            cursor: cell;
+        }
+
+        body.edit-mode .course-cell:hover {
+            background-color: rgba(127, 181, 54, 0.05);
+        }
+
+        .course-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .course-name {
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--negro);
+            line-height: 1.2;
+        }
+
+        .course-nrc {
+            font-size: 0.75rem;
+            color: var(--magenta-areandina);
+            font-weight: 700;
+        }
+
+        .course-professor {
+            font-size: 0.75rem;
+            color: var(--gris-areandina);
+            font-style: italic;
+        }
+
+        .course-classroom {
+            font-size: 0.75rem;
+            color: var(--verde-areandina);
+            font-weight: 800;
+            margin-top: auto;
+        }
+
+        /* --- ELECTIVAS SECTION --- */
+        .electives-section {
+            margin-top: 30px;
+            background-color: var(--blanco);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .electives-title {
+            color: var(--magenta-areandina);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--gris-claro);
+            font-weight: 800;
+        }
+
+        .electives-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .elective-card {
+            border: 1px solid var(--gris-medio);
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #fafafa;
+        }
+
+        /* --- MODALES --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: var(--blanco);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            background-color: var(--verde-areandina);
+            color: var(--blanco);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--gris-medio);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .modal-footer {
+            padding: 15px 25px;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #eee;
+        }
+
+        /* --- NOTIFICACIONES --- */
+        .notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: var(--blanco);
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 3000;
+            transform: translateY(100px);
+            transition: transform 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+        }
+
+        .notification.success {
+            background-color: var(--success-color);
+        }
+
+        .notification.error {
+            background-color: var(--error-color);
+        }
+
+        /* --- LOADING --- */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--verde-areandina);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <div class="nav-section">
+                <h3 class="sidebar-title title-semestres">Semestres</h3>
+                <nav class="nav-list" id="main-nav">
+                    </nav>
+            </div>
+
+            <div id="jornada-section">
+                <h3 class="sidebar-title title-jornada">Jornada</h3>
+                <section class="schedule-type">
+                    <button class="schedule-btn active" data-type="DIA">
+                        Diurna
+                    </button>
+                    <button class="schedule-btn" data-type="NOCHE">
+                        Nocturna
+                    </button>
+                </section>
+            </div>
+        </div>
+        <footer style="padding: 15px; border-top: 1px solid #eee; text-align: center; font-size: 0.7rem; color: #999;">
+            <p>Facultad de Derecho</p>
+            <p>Areandina © 2026</p>
+        </footer>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="header-left">
+                <button id="sidebar-toggle" title="Menu">☰</button>
+                <img src="https://digitk.areandina.edu.co/assets/custom/images/logo.png" alt="Logo Areandina" class="header-logo">
+                <h1 id="main-title">Horarios Académicos</h1>
+            </div>
+
+            <div class="admin-controls">
+                <button class="btn btn-primary" id="admin-btn">
+                    Modo Admin
+                </button>
+                <button class="btn btn-secondary" id="logout-btn" style="display: none;">
+                    Salir del Modo Admin
+                </button>
+            </div>
+        </header>
+
+        <div class="schedule-wrapper" id="table-container">
+            <div class="schedule-container">
+                <table id="main-table">
+                    </table>
+            </div>
+
+            <div id="electives-container" style="display: none;">
+                <div class="electives-section">
+                    <h2 class="electives-title">Materias Electivas Disponibles</h2>
+                    <div class="electives-grid" id="electives-grid">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="password-modal">
+        <div class="modal-content" style="max-width: 350px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-size: 1.1rem;">Verificación de Identidad</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="admin-password">Contraseña de Administrador</label>
+                    <input type="password" id="admin-password" placeholder="Ingrese su clave">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" style="background: transparent; color: #666;" onclick="document.getElementById('password-modal').style.display='none'">Cancelar</button>
+                <button class="btn btn-primary" id="submit-password">Acceder</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title" style="margin: 0;">Editar Clase</h3>
+                <button onclick="document.getElementById('edit-modal').style.display='none'" style="background:none; border:none; color:white; cursor:pointer; font-size:1.5rem;">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group">
+                        <label>Materia / Asignatura</label>
+                        <input type="text" id="edit-subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label>NRC</label>
+                        <input type="text" id="edit-nrc" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Docente</label>
+                        <input type="text" id="edit-professor">
+                    </div>
+                    <div class="form-group">
+                        <label>Salón / Aula</label>
+                        <input type="text" id="edit-classroom">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('edit-modal').style.display='none'">Cerrar</button>
+                <button class="btn btn-primary" id="save-class-btn">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; font-weight: 700; color: #555;">Sincronizando datos...</p>
+    </div>
+
+    <script>
+
+        // --- CONFIGURACIÓN Y ESTADO ---
+        const API_URL = 'api/horarios.php';
+        const DEMO_PASSWORD = "admin123";
+
+        const CONFIG = {
+            DAYS: ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'],
+            SEMESTER_ORDER: ["I", "I-A", "I-B", "II", "III", "III-A", "III-B", "IV", "V", "V-A", "V-B", "VI", "VII", "VIII", "IX", "X"],
+            TIME_SLOTS: {
+                DIA: ["07:15:00-08:00:00", "08:00:00-08:45:00", "08:45:00-09:30:00", "09:30:00-10:15:00", "10:15:00-11:00:00", "11:00:00-11:45:00", "11:45:00-12:30:00", "12:30:00-01:15:00"],
+                NOCHE: ["18:30:00-19:15:00", "19:15:00-20:00:00", "20:00:00-20:45:00", "20:45:00-21:30:00", "21:30:00-22:15:00"]
+            }
+        };
+
+        let currentView = 'semester';
+        let currentSemester = "I"
+        let currentScheduleType = "DIA";
+        let isAdminMode = false;
+        let scheduleData = {};
+        let semesters = [];
+
+        // Inicialización
+
+        async function initilizeApp() {
+            initSidebarState();
+            setupEvenListeners();
+
+            try {
+                await loadAllData();
+            } catch (error) {
+                console.error("Fallo de inicialización", error);
+            }
+
+            buildSidebarNavigation();
+            handleNavigation('semester', currentSemester);
+        }
+
+        function initSidebarState() {
+            if (window.innerWidth < 1024) {
+                document.body.classList.add('sidebar-close');
+            }
+        }
+
+        // Datos
+
+        async function loadAllData() {
+            showLoading(true);
+            try {
+                const response = await fetch('${API_URL}?v=${Date.now()}');
+                const data = await response.json();
+
+                if (data.status === 'succes') {
+                    scheduleData = data.scehdule || {};
+                    semesters = data.semesters || [];
+                }
+            } catch (error) {
+                showNotification("Error de conexión con el servidor", "error");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function saveScheduleItem(itmeData) {
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json'},
+                    body: JSON.stringfy(itemData)
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    await loadData();
+                    showNotification("Cambios guardados con éxito", "success");
+                    return true;
+                }
+                throw new Error(result.message);
+            } catch (error) {
+                showNotification(error.message || "Error al guardar datos", "error");
+                return false;
+            } finally {
+                showLoading(false)
+            }
+        }
+
+        // User Interface Renders
+        function buildSidebarNavigation() {
+            const nav = document.getElementById('main-nav');
+            nav.innerHTML = '';
+
+            const groups = {};
+            CONFIG.SEMESTER_ORDER.forEach(id => {
+            const base = id.split('-')[0];
+            if (!groups[base]) groups[base] = [];
+            groups[base].push(id);
+
+            });
+
+            Object.keys(groups).forEach(base => {
+                const ids = groups[base];
+                const navItem = document.createElement('div');
+                navItem.className = 'nav-Item';
+
+                if (ids-length === 1) {
+                    navItem.innerHTML = <button class="nav-link" onclick="handlenavigation('semester', '${ids[0]}')"> Semestre ${dis[0]}</button>;
+                } else {
+                    
+                }
+            })
+        }
+
+
+</body>
+
+</html>
