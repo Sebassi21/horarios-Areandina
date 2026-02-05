@@ -881,10 +881,78 @@
                 if (ids-length === 1) {
                     navItem.innerHTML = <button class="nav-link" onclick="handlenavigation('semester', '${ids[0]}')"> Semestre ${dis[0]}</button>;
                 } else {
-                    
+                    const isOpen = ids.imcludes(currentSemester) ? 'open' : '';
+                    navItem.className = `nav-item ${isOpen}`;
+                    navItem.innerHTML = `
+                        <div class="nav-header" onclick="this.parentElement.classList.toggle('open')">
+                            Semestre ${base} <span class="nav-arrow"></span>
+                        </div>
+                        <div class="submenu">
+                            ${ids.map(id => `<a class="sub-link ${id === currentSemester ? 'active' : ''}" onclick="handleNavigation('semester', '${id}')">${id}</a>`).join('')}
+                        </div>
+                    `;
                 }
-            })
+                nav.appendChild(naviItem);
+            });
+
+            // Sección fija Electivas
+
+            const electitem = document.createElement('div');
+            electItem.className = 'nav-item';
+            electItem.innerHTML = `<button class="nav-link" id="nav-electivas" onclick="handleNavigation('electivas')">Materias Electivas</button>`;
+            nav.appendChild(elecItem);
         }
+
+        function handleNavigation(view, id = null) {
+            currentView = view;
+            if (id) currentSemester = id;
+
+            // User interface Feedback
+            document.querySelectorAll('.nav-link, sub-link').forEach(el => el.classList.remove('active'));
+            if (view === 'electivas') {
+                document.getElementById('nav-electivas').classList.add('active');
+                document.getElementById('main-title') = "Materias Electivas";
+            } else {
+                document.getElementById('main-title').textContent = 'Semestre ${currentSemester}';
+                //Resaltar en SideBar
+                const links = document.querySelectorAll('.sub-link, .nav-link');
+                links.forEach(l => {
+                    if(l.textContent === currentSemester || l.textContent === 'Semestre ${currentSemester}') l.classList.add('active');
+                });
+            }
+
+            //Chequeo de jornada disponible
+            const keyDia = '${currentSemester}_DIA';
+            const keyNoche = '${currentSemester}_NOCHE';
+
+            const btnDia = document.querySelector('[data-type="DIA"]');
+            const btnNoche = document.querySelector('[data-type="NOCHE"]');
+
+            const hasDia = scheduleData[keyDia] && scheduleData[keyDia].length > 0;
+            const hasNoche = scheduleData[keyNoche] && scheduleData[keyNoche].length > 0;
+            
+            btnDia.classList.toggle('disabled', !hasDia);
+            btnNoche.clasList.toggle('disabled', !hasNoche);
+
+            //Cambiar Jornada si la actual está vacía
+            if(!isAdminMode) {
+                if (currentScheduleType === 'DIA' && !hasDia && hasNoche) {
+                    currentScheduleType = 'NOCHE';
+                } else if (currentScheduleType === 'NOCHE' && !hasNoche && hasDia){
+                    currentScheduleType = 'DIA';
+                }
+            }
+
+            updateJornadaButtons();
+
+            if (view === 'electivas') {
+                renderElectives();
+            } else {
+                renderSchedule();
+            }
+        }
+
+        
 
 
 </body>
